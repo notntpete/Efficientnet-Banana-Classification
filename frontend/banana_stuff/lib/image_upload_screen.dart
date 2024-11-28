@@ -5,17 +5,31 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-class CustomLayoutScreen extends StatefulWidget {
+class ImageUploadScreen extends StatefulWidget {
+  const ImageUploadScreen({Key? key}) : super(key: key);
+
   @override
-  _CustomLayoutScreenState createState() => _CustomLayoutScreenState();
+  _ImageUploadScreenState createState() => _ImageUploadScreenState();
 }
 
-class _CustomLayoutScreenState extends State<CustomLayoutScreen> {
+class _ImageUploadScreenState extends State<ImageUploadScreen> {
   Uint8List? _imageBytes;
   XFile? _imageFile;
   String _prediction = '';
+  bool _predictionVisible = false;
+  bool _headerVisible = false;
 
-  // Pick image from gallery
+  final Map<String, String> classNameMapping = {
+    "lakatan_ripe_spotted": "Lakatan Ripe Spotted",
+    "lakatan_ripe_unspotted": "Lakatan Ripe Unspotted",
+    "lakatan_unripe_spotted": "Lakatan Unripe Spotted",
+    "lakatan_unripe_unspotted": "Lakatan Unripe Unspotted",
+    "latundan_ripe_spotted": "Latundan Ripe Spotted",
+    "latundan_ripe_unspotted": "Latundan Ripe Unspotted",
+    "latundan_unripe_spotted": "Latundan Unripe Spotted",
+    "latundan_unripe_unspotted": "Latundan Unripe Unspotted",
+  };
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -25,16 +39,17 @@ class _CustomLayoutScreenState extends State<CustomLayoutScreen> {
       setState(() {
         _imageFile = pickedFile;
         _imageBytes = imageBytes;
+        _prediction = '';
+        _predictionVisible = false;
+        _headerVisible = false;
       });
     }
   }
 
-  // Send image to FastAPI for prediction
   Future<void> _sendImage() async {
     if (_imageFile == null) return;
 
-    var uri = Uri.parse(
-        'http://192.168.1.182:8000/predict/'); // Update with your backend URL
+    var uri = Uri.parse('http://192.168.1.182:8000/predict/');
     var request = http.MultipartRequest('POST', uri);
 
     var imageFile = http.MultipartFile.fromBytes(
@@ -52,35 +67,43 @@ class _CustomLayoutScreenState extends State<CustomLayoutScreen> {
         final responseString = await response.stream.bytesToString();
         final Map<String, dynamic> data = json.decode(responseString);
 
+        String rawPrediction = data['class'] ?? 'No prediction received';
         setState(() {
-          _prediction = data['class'] ?? 'No prediction received';
+          _headerVisible = true;
+          _prediction = classNameMapping[rawPrediction] ?? rawPrediction;
+          _predictionVisible = true;
         });
       } else {
         setState(() {
+          _headerVisible = true;
           _prediction =
               'Failed to get prediction. Status: ${response.statusCode}';
+          _predictionVisible = true;
         });
       }
     } catch (e) {
       setState(() {
+        _headerVisible = true;
         _prediction = 'Error: $e';
+        _predictionVisible = true;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isWeb = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
       body: Container(
-        color: Colors.blue, // Blue background
+        color: Colors.blue,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Header
             Container(
-              padding: EdgeInsets.all(16.0),
-              color: Colors.black, // Header background color
-              child: Center(
+              padding: const EdgeInsets.all(16.0),
+              color: Colors.black,
+              child: const Center(
                 child: Text(
                   'BANANA CLASSIFICATION',
                   style: TextStyle(
@@ -88,57 +111,91 @@ class _CustomLayoutScreenState extends State<CustomLayoutScreen> {
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
-
-            // Orange rectangle with content
             Expanded(
               child: Center(
                 child: Container(
                   width: double.infinity,
-                  margin: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: Colors.orange, // Orange rectangle background
-                    borderRadius:
-                        BorderRadius.circular(16.0), // Rounded corners
-                    border: Border.all(
-                        color: Colors.black, width: 2.0), // Black border
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(16.0),
+                    border: Border.all(color: Colors.black, width: 2.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 6,
+                        offset: const Offset(4, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _imageBytes == null
-                          ? Text('No image selected.')
-                          : Image.memory(_imageBytes!, height: 200),
-                      SizedBox(height: 16),
-                      Text(
-                        'Prediction:',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        _prediction,
-                        style: TextStyle(fontSize: 16),
+                          ? const Text(
+                              'There\'s nothing here cause I don\'t have anything to check',
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.black),
+                              textAlign: TextAlign.center,
+                            )
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(12.0),
+                              child: Image.memory(_imageBytes!, height: 200),
+                            ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: isWeb ? 400 : double.infinity,
+                        margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(color: Colors.black, width: 2.0),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _headerVisible
+                                ? const Text(
+                                    'You\'re giving me work now? Well it\'s-',
+                                    style: TextStyle(fontSize: 14),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : const SizedBox.shrink(),
+                            const SizedBox(height: 8),
+                            _predictionVisible
+                                ? Text(
+                                    _prediction,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : const SizedBox.shrink(),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-
-            // Row for circular buttons
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildCircularButton(
-                      Icons.image, _pickImage), // Pick Image button
-                  _buildCircularButton(
-                      Icons.upload, _sendImage), // Upload and Predict button
-                  _buildCircularButton(Icons.refresh, _reset), // Reset button
+                  _buildCircularButton(Icons.image, _pickImage),
+                  _buildCircularButton(Icons.upload, _sendImage),
+                  _buildCircularButton(Icons.refresh, _reset),
                 ],
               ),
             ),
@@ -148,7 +205,6 @@ class _CustomLayoutScreenState extends State<CustomLayoutScreen> {
     );
   }
 
-  // Helper method to create circular buttons
   Widget _buildCircularButton(IconData icon, VoidCallback onPressed) {
     return GestureDetector(
       onTap: onPressed,
@@ -156,27 +212,30 @@ class _CustomLayoutScreenState extends State<CustomLayoutScreen> {
         width: 60,
         height: 60,
         decoration: BoxDecoration(
-          color: Colors.white, // Button background color
+          color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.black, width: 2.0), // Black border
+          border: Border.all(color: Colors.black, width: 2.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 6,
+              offset: const Offset(4, 4),
+            ),
+          ],
         ),
         child: Icon(icon, color: Colors.black),
       ),
     );
   }
 
-  // Reset the image and prediction
   void _reset() {
     setState(() {
       _imageBytes = null;
       _imageFile = null;
       _prediction = '';
+      _predictionVisible = false;
+      _headerVisible = false;
     });
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: CustomLayoutScreen(),
-  ));
 }

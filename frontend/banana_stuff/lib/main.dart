@@ -29,7 +29,7 @@ class IntroScreen extends StatelessWidget {
               // Navigate to the Image Upload Screen
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CustomLayoutScreen()),
+                MaterialPageRoute(builder: (context) => ImageUploadScreen()),
               );
             },
             child: Container(
