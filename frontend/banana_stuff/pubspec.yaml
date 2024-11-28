@@ -1,0 +1,38 @@
+name: banana_stuff
+description: "A new Flutter project for banana classification."
+publish_to: 'none'  # Prevent accidental publishing to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"  # Ensure compatibility with Dart SDK 3.x
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^0.8.5+3 # Updated to the latest stable version (check pub.dev for the latest)
+  http: 1.2.2         # Updated to the latest version
+  http_parser: ^4.0.0   # Added to support multipart form data with MediaType
+  cupertino_icons: ^1.0.8  # Latest version as of this edit
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mockito: ^5.4.3  # Updated to the latest stable version
+  flutter_lints: ^3.0.0  # Updated lint rules (ensure your IDE supports it)
+
+flutter:
+  uses-material-design: true  # Ensure Material Icons are included
+
+  # Uncomment and configure the assets section if you have images or other assets to include
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+
+  # Uncomment and configure the fonts section if you have custom fonts to add
+  # fonts:
+  #   - family: CustomFont
+  #     fonts:
+  #       - asset: fonts/CustomFont-Regular.ttf
+  #       - asset: fonts/CustomFont-Bold.ttf
+  #         weight: 700
