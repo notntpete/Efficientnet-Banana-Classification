@@ -22,6 +22,7 @@ class IntroScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        //change color
         color: Colors.blue, // Blue background
         child: Center(
           child: GestureDetector(
