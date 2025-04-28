@@ -12,10 +12,10 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can replace "*" with specific origins, e.g. ["http://localhost:55745"]
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Model loading function (singleton pattern)
@@ -38,6 +38,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
+# Original 8 class names
 class_names = [
     "lakatan_ripe_spotted", "lakatan_ripe_unspotted",
     "lakatan_unripe_spotted", "lakatan_unripe_unspotted",
@@ -45,13 +46,25 @@ class_names = [
     "latundan_unripe_spotted", "latundan_unripe_unspotted"
 ]
 
+# Map detailed 8 classes into 4 broad classes
+mapping = {
+    "lakatan_ripe_spotted": "lakatan_ripe",
+    "lakatan_ripe_unspotted": "lakatan_ripe",
+    "lakatan_unripe_spotted": "lakatan_unripe",
+    "lakatan_unripe_unspotted": "lakatan_unripe",
+    "latundan_ripe_spotted": "latundan_ripe",
+    "latundan_ripe_unspotted": "latundan_ripe",
+    "latundan_unripe_spotted": "latundan_unripe",
+    "latundan_unripe_unspotted": "latundan_unripe"
+}
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Banana Classification API!"}
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
-    # Load the model (only once, thread-safe)
+    # Load the model
     model = load_model()
 
     # Load the image
@@ -63,7 +76,17 @@ async def predict(file: UploadFile = File(...)):
     # Perform prediction
     with torch.no_grad():
         outputs = model(input_tensor)
-        _, predicted = torch.max(outputs, 1)
-        prediction = class_names[predicted.item()]
+        probabilities = torch.softmax(outputs, dim=1)
+        confidence, predicted = torch.max(probabilities, 1)
+        predicted_class = class_names[predicted.item()]
 
-    return {"class": prediction}
+    # Map to broader category
+    broader_class = mapping[predicted_class]
+
+    # Convert confidence to percentage
+    confidence_percent = confidence.item() * 100
+
+    return {
+        "class": broader_class,
+        "confidence": round(confidence_percent, 2)
+    }

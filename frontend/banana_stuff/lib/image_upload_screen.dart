@@ -16,6 +16,7 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
   Uint8List? _imageBytes;
   XFile? _imageFile;
   String _prediction = '';
+  double? _confidence;
   bool _predictionVisible = false;
   bool _headerVisible = false;
 
@@ -40,6 +41,7 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
         _imageFile = pickedFile;
         _imageBytes = imageBytes;
         _prediction = '';
+        _confidence = null;
         _predictionVisible = false;
         _headerVisible = false;
       });
@@ -68,9 +70,12 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
         final Map<String, dynamic> data = json.decode(responseString);
 
         String rawPrediction = data['class'] ?? 'No prediction received';
+        double? confidence = data['confidence']?.toDouble();
+
         setState(() {
           _headerVisible = true;
           _prediction = classNameMapping[rawPrediction] ?? rawPrediction;
+          _confidence = confidence;
           _predictionVisible = true;
         });
       } else {
@@ -170,16 +175,42 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
                                   )
                                 : const SizedBox.shrink(),
                             const SizedBox(height: 8),
-                            _predictionVisible
-                                ? Text(
-                                    _prediction,
+                            if (_predictionVisible) ...[
+                              Text(
+                                _prediction,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              if (_confidence != null)
+                                RichText(
+                                  textAlign: TextAlign.center,
+                                  text: TextSpan(
                                     style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.black,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  )
-                                : const SizedBox.shrink(),
+                                    children: [
+                                      const TextSpan(
+                                          text: 'I am confident that I am '),
+                                      TextSpan(
+                                        text:
+                                            '${_confidence!.toStringAsFixed(2)}%',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                          text: ' accurate with this one!'),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ],
                         ),
                       ),
@@ -234,6 +265,7 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
       _imageBytes = null;
       _imageFile = null;
       _prediction = '';
+      _confidence = null;
       _predictionVisible = false;
       _headerVisible = false;
     });
