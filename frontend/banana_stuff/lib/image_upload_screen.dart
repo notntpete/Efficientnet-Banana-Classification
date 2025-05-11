@@ -51,7 +51,7 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
   Future<void> _sendImage() async {
     if (_imageFile == null) return;
 
-    var uri = Uri.parse('http://192.168.1.182:8000/predict/');
+    var uri = Uri.parse('http://localhost:8000/predict/');
     var request = http.MultipartRequest('POST', uri);
 
     var imageFile = http.MultipartFile.fromBytes(
