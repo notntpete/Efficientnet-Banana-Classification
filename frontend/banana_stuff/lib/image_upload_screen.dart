@@ -21,14 +21,10 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
   bool _headerVisible = false;
 
   final Map<String, String> classNameMapping = {
-    "lakatan_ripe_spotted": "Lakatan Ripe Spotted",
-    "lakatan_ripe_unspotted": "Lakatan Ripe Unspotted",
-    "lakatan_unripe_spotted": "Lakatan Unripe Spotted",
-    "lakatan_unripe_unspotted": "Lakatan Unripe Unspotted",
-    "latundan_ripe_spotted": "Latundan Ripe Spotted",
-    "latundan_ripe_unspotted": "Latundan Ripe Unspotted",
-    "latundan_unripe_spotted": "Latundan Unripe Spotted",
-    "latundan_unripe_unspotted": "Latundan Unripe Unspotted",
+    "lakatan_ripe": "Lakatan Ripe",
+    "lakatan_unripe": "Lakatan Unripe",
+    "latundan_ripe": "Latundan Ripe",
+    "latundan_unripe": "Latundan Unripe",
   };
 
   Future<void> _pickImage() async {
@@ -51,7 +47,7 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
   Future<void> _sendImage() async {
     if (_imageFile == null) return;
 
-    var uri = Uri.parse('http://localhost:8000/predict/');
+    var uri = Uri.parse('http://127.0.0.1:8000/predict/');
     var request = http.MultipartRequest('POST', uri);
 
     var imageFile = http.MultipartFile.fromBytes(

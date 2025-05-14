@@ -12,20 +12,20 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Model loading function (singleton pattern)
-def load_model(num_classes=8):
+# Model loading function (4 classes only)
+def load_model(num_classes=4):
     if not hasattr(load_model, "_model"):
         print("Loading model...")
         model = efficientnet_v2_s(pretrained=False)
         model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
-        MODEL_PATH = "C:/Users/virus/OneDrive/Desktop/Banana Thesis/efficientnetv2_banana_classification.pth"
-        state_dict = torch.load(MODEL_PATH, map_location=torch.device('cpu'), weights_only=True)
+        MODEL_PATH = "C:/Users/virus/OneDrive/Desktop/Banana Thesis/efficientnet_banana_classification.pth"
+        state_dict = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
         model.eval()
         load_model._model = model
@@ -38,25 +38,13 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Original 8 class names
+# New 4 class names — directly predicted by the model
 class_names = [
-    "lakatan_ripe_spotted", "lakatan_ripe_unspotted",
-    "lakatan_unripe_spotted", "lakatan_unripe_unspotted",
-    "latundan_ripe_spotted", "latundan_ripe_unspotted",
-    "latundan_unripe_spotted", "latundan_unripe_unspotted"
+    "lakatan_ripe",
+    "lakatan_unripe",
+    "latundan_ripe",
+    "latundan_unripe"
 ]
-
-# Map detailed 8 classes into 4 broad classes
-mapping = {
-    "lakatan_ripe_spotted": "lakatan_ripe",
-    "lakatan_ripe_unspotted": "lakatan_ripe",
-    "lakatan_unripe_spotted": "lakatan_unripe",
-    "lakatan_unripe_unspotted": "lakatan_unripe",
-    "latundan_ripe_spotted": "latundan_ripe",
-    "latundan_ripe_unspotted": "latundan_ripe",
-    "latundan_unripe_spotted": "latundan_unripe",
-    "latundan_unripe_unspotted": "latundan_unripe"
-}
 
 @app.get("/")
 def read_root():
@@ -67,10 +55,8 @@ async def predict(file: UploadFile = File(...)):
     # Load the model
     model = load_model()
 
-    # Load the image
+    # Load and preprocess the image
     image = Image.open(file.file).convert("RGB")
-
-    # Preprocess the image
     input_tensor = transform(image).unsqueeze(0)
 
     # Perform prediction
@@ -80,13 +66,7 @@ async def predict(file: UploadFile = File(...)):
         confidence, predicted = torch.max(probabilities, 1)
         predicted_class = class_names[predicted.item()]
 
-    # Map to broader category
-    broader_class = mapping[predicted_class]
-
-    # Convert confidence to percentage
-    confidence_percent = confidence.item() * 100
-
     return {
-        "class": broader_class,
-        "confidence": round(confidence_percent, 2)
+        "class": predicted_class,
+        "confidence": round(confidence.item() * 100, 2)
     }
