@@ -5,6 +5,8 @@ from torchvision import transforms
 from PIL import Image
 import torch
 import torch.nn as nn
+from rembg import remove
+import io
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -18,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Model loading function (4 classes only)
+# Load EfficientNetV2S model with 4 output classes
 def load_model(num_classes=4):
     if not hasattr(load_model, "_model"):
         print("Loading model...")
@@ -31,14 +33,13 @@ def load_model(num_classes=4):
         load_model._model = model
     return load_model._model
 
-# Image preprocessing
+# Preprocessing transform
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# New 4 class names — directly predicted by the model
+# 4 output classes
 class_names = [
     "lakatan_ripe",
     "lakatan_unripe",
@@ -52,14 +53,25 @@ def read_root():
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
-    # Load the model
+    # Load model
     model = load_model()
 
-    # Load and preprocess the image
-    image = Image.open(file.file).convert("RGB")
+    # Read image bytes
+    image_bytes = await file.read()
+
+    # Remove background
+    no_bg_bytes = remove(image_bytes)
+
+    # Convert bytes to PIL image
+    image = Image.open(io.BytesIO(no_bg_bytes)).convert("RGB")
+
+    # Resize to 224x224
+    image = image.resize((224, 224))
+
+    # Transform
     input_tensor = transform(image).unsqueeze(0)
 
-    # Perform prediction
+    # Predict
     with torch.no_grad():
         outputs = model(input_tensor)
         probabilities = torch.softmax(outputs, dim=1)
